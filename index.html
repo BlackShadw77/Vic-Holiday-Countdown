@@ -1,0 +1,54 @@
+<script>
+  async function fetchTermDates() {
+    const url = new URL('https://wovg-community.gateway.prod.api.vic.gov.au/vicgov/v2.0/important-dates');
+    url.searchParams.append('dateType', 'SCHOOL_TERM');
+    url.searchParams.append('sort', 'important_date');
+    // Append your API key if required:
+    // url.searchParams.append('api_key', 'YOUR_API_KEY');
+
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('API error');
+    const json = await resp.json();
+    return json.records || [];
+  }
+
+  function nextTermEnd(records = []) {
+    const today = new Date();
+    const ends = records.map(r => ({
+      date: new Date(r.important_date),
+      detail: r.name
+    }));
+    const future = ends.filter(e => e.date > today);
+    const next = future.length ? future[0] : ends[ends.length - 1];
+    return next;
+  }
+
+  (async function() {
+    let target = { date: new Date(), detail: '' };
+    try {
+      const records = await fetchTermDates();
+      target = nextTermEnd(records);
+    } catch (err) {
+      console.error('Failed to fetch terms', err);
+      // Fallback to a default or hard‑coded date if necessary
+    }
+
+    const daysParam = new URLSearchParams(window.location.search).get('days') || '1,2,3,4,5';
+    const validDays = daysParam.split(',').map(d => parseInt(d.trim())).filter(d => d >=0 && d<=6);
+
+    function countValidDays(start, end) {
+      let c = 0, cur = new Date(start); cur.setHours(0,0,0,0);
+      while (cur < end.date) {
+        if (validDays.includes(cur.getDay())) c++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return c;
+    }
+
+    const rem = countValidDays(new Date(), target);
+    const el = document.getElementById('countdown');
+    if (rem <= 0) el.innerHTML = 'Term has ended!';
+    else el.innerHTML = `${rem} working day${rem !== 1 ? 's' : ''} until end of term (${target.date.toDateString()})`;
+
+  })();
+</script>
