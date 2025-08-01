@@ -7,28 +7,47 @@
   <style>
     body {
       font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+      text-align: center;
+      padding-top: 50px;
       background: #f5f5f5;
-      margin: 0;
     }
-    #next-term-end {
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: #2c3e50;
     }
-    #countdown {
+    .countdown {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
       font-size: 2.5rem;
       font-weight: bold;
-      color: #2c3e50;
+      color: #34495e;
+    }
+    .labels {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      color: #555;
     }
   </style>
 </head>
 <body>
-  <div id="next-term-end">Loading next school term...</div>
-  <div id="countdown">...</div>
+  <h1>Time until holidays</h1>
+  <div class="countdown">
+    <div id="days">--</div>
+    <div id="hours">--</div>
+    <div id="minutes">--</div>
+    <div id="seconds">--</div>
+  </div>
+  <div class="labels">
+    <div>days</div>
+    <div>hrs</div>
+    <div>min</div>
+    <div>sec</div>
+  </div>
 
   <script>
     const params = new URLSearchParams(window.location.search);
@@ -57,41 +76,47 @@
 
         const next = termEnds[0];
         if (next) {
-          document.getElementById("next-term-end").textContent =
-            `Next Term Ends: ${next.name} (${next.date})`;
-          const targetDateTime = new Date(`${next.date}T14:30:00`);
+          // 2:30 PM AEST = 04:30 UTC (AEST is UTC+10)
+          const targetDateTime = new Date(`${next.date}T04:30:00Z`);
           startCountdownTo(targetDateTime, weekdays);
-        } else {
-          document.getElementById("next-term-end").textContent =
-            "No upcoming term end found.";
         }
       });
 
     function startCountdownTo(targetDate, allowedWeekdays) {
-      const countdownEl = document.getElementById("countdown");
+      const el = {
+        days: document.getElementById("days"),
+        hours: document.getElementById("hours"),
+        minutes: document.getElementById("minutes"),
+        seconds: document.getElementById("seconds"),
+      };
 
       function calculateSchoolDays(start, end, allowedDays) {
         let count = 0;
         const d = new Date(start);
-        d.setHours(0, 0, 0, 0);
+        d.setUTCHours(0, 0, 0, 0);
         while (d < end) {
-          if (allowedDays.includes(d.getDay())) count++;
-          d.setDate(d.getDate() + 1);
+          const localDay = new Date(d.getTime() + 10 * 60 * 60 * 1000).getDay(); // Convert to AEST
+          if (allowedDays.includes(localDay)) count++;
+          d.setUTCDate(d.getUTCDate() + 1);
         }
         return count;
       }
 
       function updateCountdown() {
         const now = new Date();
-
         const totalMs = targetDate - now;
         const totalSeconds = Math.floor(totalMs / 1000);
+
         const seconds = totalSeconds % 60;
         const minutes = Math.floor((totalSeconds / 60)) % 60;
         const hours = Math.floor((totalSeconds / 3600)) % 24;
+
         const schoolDays = calculateSchoolDays(now, targetDate, allowedWeekdays);
 
-        countdownEl.textContent = `${schoolDays} school day${schoolDays === 1 ? '' : 's'} remaining — ${hours}h ${minutes}m ${seconds}s`;
+        el.days.textContent = String(schoolDays).padStart(2, '0');
+        el.hours.textContent = String(hours).padStart(2, '0');
+        el.minutes.textContent = String(minutes).padStart(2, '0');
+        el.seconds.textContent = String(seconds).padStart(2, '0');
       }
 
       updateCountdown();
