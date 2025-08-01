@@ -59,7 +59,8 @@
         if (next) {
           document.getElementById("next-term-end").textContent =
             `Next Term Ends: ${next.name} (${next.date})`;
-          startCountdownTo(new Date(next.date), weekdays);
+          const targetDateTime = new Date(`${next.date}T14:30:00`);
+          startCountdownTo(targetDateTime, weekdays);
         } else {
           document.getElementById("next-term-end").textContent =
             "No upcoming term end found.";
@@ -69,9 +70,10 @@
     function startCountdownTo(targetDate, allowedWeekdays) {
       const countdownEl = document.getElementById("countdown");
 
-      function calculateWeekdaysBetween(start, end, allowedDays) {
+      function calculateSchoolDays(start, end, allowedDays) {
         let count = 0;
         const d = new Date(start);
+        d.setHours(0, 0, 0, 0);
         while (d < end) {
           if (allowedDays.includes(d.getDay())) count++;
           d.setDate(d.getDate() + 1);
@@ -81,12 +83,19 @@
 
       function updateCountdown() {
         const now = new Date();
-        const daysLeft = calculateWeekdaysBetween(now, targetDate, allowedWeekdays);
-        countdownEl.textContent = `${daysLeft} school day${daysLeft === 1 ? '' : 's'} remaining`;
+
+        const totalMs = targetDate - now;
+        const totalSeconds = Math.floor(totalMs / 1000);
+        const seconds = totalSeconds % 60;
+        const minutes = Math.floor((totalSeconds / 60)) % 60;
+        const hours = Math.floor((totalSeconds / 3600)) % 24;
+        const schoolDays = calculateSchoolDays(now, targetDate, allowedWeekdays);
+
+        countdownEl.textContent = `${schoolDays} school day${schoolDays === 1 ? '' : 's'} remaining — ${hours}h ${minutes}m ${seconds}s`;
       }
 
       updateCountdown();
-      setInterval(updateCountdown, 60 * 1000);
+      setInterval(updateCountdown, 1000);
     }
   </script>
 </body>
